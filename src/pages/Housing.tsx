@@ -31,7 +31,7 @@ const Housing = () => {
       id: 1,
       title: "Studio moderne près de l'université",
       price: 300,
-      location: "Ariana, 2km de l'UTM",
+      location: "Ariana, 2kkkm de l'UTM",
       type: "Studio",
       bedrooms: 1,
       bathrooms: 1,
