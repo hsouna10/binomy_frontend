@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Home, LogIn, UserPlus, Sun, Moon, UserCircle, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import React, { useContext, useEffect, useState } from "react";
-import api from "@/lib/api";
+import axios from "axios";
 // Avatar with image fallback
 const Avatar = ({ name, src }: { name?: string, src?: string }) => {
   if (src) {
@@ -34,7 +34,9 @@ const Header = () => {
   useEffect(() => {
     const token = localStorage.getItem("binomiToken");
     if (token) {
-      api.get("/me", { headers: { Authorization: `Bearer ${token.replace(/['"]+/g, '')}` } })
+      axios.get("http://localhost:5000/api/me", {
+        headers: { Authorization: `Bearer ${token.replace(/['"]+/g, '')}` }
+      })
         .then(res => setUser(res.data.user || res.data))
         .catch(() => setUser(null));
     } else {
@@ -111,12 +113,15 @@ const Header = () => {
                 aria-label="Profil utilisateur"
               >
                 <Avatar
-                  name={user.first_name || user.last_name || user.email}
+                  name={user.first_name ? user.first_name + (user.last_name ? ' ' + user.last_name : '') : user.email}
                   src={user.profile_picture_url}
                 />
               </button>
               {menuOpen && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50">
+                  <div className="px-4 py-2 font-semibold text-center text-primary">
+                    {user.first_name} {user.last_name}
+                  </div>
                   <Link to="/profile" className="flex items-center px-4 py-2 hover:bg-accent text-sm">
                     <UserCircle className="w-4 h-4 mr-2" />
                     Profil
