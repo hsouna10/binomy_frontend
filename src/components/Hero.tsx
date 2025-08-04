@@ -6,7 +6,7 @@ import { LangContext } from "@/context/LangContext";
 
 const translations = {
   fr: {
-    title1: "Trouvez votre",
+    title1: "Trouvez votr",
     title2: "binôme parfait",
     title3: "et votre",
     title4: "logement idéal",

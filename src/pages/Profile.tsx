@@ -1,46 +1,12 @@
 import { useState, useEffect } from "react";
-import { getProfile, updateProfile } from "@/lib/profileApi";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getProfile } from "@/lib/profileApi";
 import Header from "@/components/Header";
-import { 
-  User, 
-  GraduationCap, 
-  MapPin, 
-  Euro, 
-  Clock, 
-  Cigarette, 
-  CigaretteOff, 
-  Dog, 
-  Volume2, 
-  VolumeX,
-  Camera,
-  Save
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, GraduationCap, MapPin, Euro, Clock, Cigarette, Dog, Volume2, VolumeX, Languages, Star, HeartHandshake, Users, BookOpen, Home, Info, Calendar, Smile, ShieldCheck, CheckCircle, XCircle } from "lucide-react";
 
 const Profile = () => {
-  const [profile, setProfile] = useState({
-    firstName: "",
-    lastName: "", 
-    university: "",
-    field: "",
-    budget: "",
-    isSmoker: false,
-    allowsPets: false,
-    sleepTime: "",
-    wakeTime: "",
-    socialLevel: "",
-    cleanliness: "",
-    description: ""
-  });
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -52,7 +18,7 @@ const Profile = () => {
         const token = localStorage.getItem("binomiToken");
         if (!token) throw new Error("Token manquant");
         const data = await getProfile(token);
-        setProfile({ ...profile, ...data });
+        setProfile(data);
       } catch (err: any) {
         setError(err?.response?.data?.message || err.message || "Erreur lors du chargement du profil");
       } finally {
@@ -60,287 +26,103 @@ const Profile = () => {
       }
     };
     fetchProfile();
-    // eslint-disable-next-line
   }, []);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-lg">Chargement...</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
+  if (!profile) return null;
+
+  // Helper for boolean display
+  const YesNo = ({value}: {value: any}) => value === true || value === "true" || value === "oui" ? <Badge className="bg-green-100 text-green-700">Oui</Badge> : <Badge className="bg-red-100 text-red-700">Non</Badge>;
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
       <div className="container py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-4">
-            <h1 className="text-3xl font-bold">Mon Profil</h1>
-            <p className="text-muted-foreground">
-              Complétez votre profil pour améliorer votre matching
-            </p>
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold flex items-center justify-center gap-2"><User className="w-7 h-7 text-blue-600" /> Mon Profil</h1>
+            <p className="text-muted-foreground">Voici toutes vos informations enregistrées</p>
           </div>
 
-          <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="personal">Informations personnelles</TabsTrigger>
-              <TabsTrigger value="preferences">Préférences</TabsTrigger>
-              <TabsTrigger value="lifestyle">Mode de vie</TabsTrigger>
-            </TabsList>
+          {/* Section Académique */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-700"><GraduationCap className="w-5 h-5" /> Infos académiques</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><span className="font-semibold">Université :</span> {profile.university}</div>
+              <div><span className="font-semibold">Niveau d'études :</span> {profile.study_level}</div>
+              <div><span className="font-semibold">Domaine :</span> {profile.field_of_study}</div>
+              <div><span className="font-semibold">Année académique :</span> {profile.academic_year}</div>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="personal" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <User className="w-5 h-5 mr-2" />
-                    Informations de base
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center space-x-6">
-                    <Avatar className="w-24 h-24">
-                      <AvatarImage src="" />
-                      <AvatarFallback className="text-lg">SD</AvatarFallback>
-                    </Avatar>
-                    <Button variant="outline" size="sm">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Changer la photo
-                    </Button>
-                  </div>
+          {/* Section Logement */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-700"><Home className="w-5 h-5" /> Logement & Budget</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><Euro className="inline w-4 h-4 mr-1 text-green-600" /> <span className="font-semibold">Budget :</span> {profile.housing_budget} TND</div>
+              <div><span className="font-semibold">Budget min-max :</span> {profile.budget_min} - {profile.budget_max} TND</div>
+              <div><span className="font-semibold">Type de chambre :</span> {profile.housing_room_type}</div>
+              <div><span className="font-semibold">Type de logement :</span> {profile.housing_type}</div>
+              <div><span className="font-semibold">Durée :</span> {profile.housing_duration}</div>
+              <div><span className="font-semibold">Date d'emménagement :</span> {profile.housing_move_in ? new Date(profile.housing_move_in).toLocaleDateString() : ''}</div>
+              <div><span className="font-semibold">Localisation :</span> {profile.housing_location}</div>
+              <div><span className="font-semibold">Localisation préférée :</span> {profile.preferred_location}</div>
+            </CardContent>
+          </Card>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">Prénom</Label>
-                      <Input 
-                        id="firstName" 
-                        value={profile.firstName}
-                        onChange={(e) => setProfile({...profile, firstName: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Nom</Label>
-                      <Input 
-                        id="lastName" 
-                        value={profile.lastName}
-                        onChange={(e) => setProfile({...profile, lastName: e.target.value})}
-                      />
-                    </div>
-                  </div>
+          {/* Section Préférences & Valeurs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-pink-700"><HeartHandshake className="w-5 h-5" /> Préférences & valeurs</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><Star className="inline w-4 h-4 mr-1 text-pink-600" /> <span className="font-semibold">Centres d'intérêt :</span> {Array.isArray(profile.interests) ? profile.interests.join(', ') : profile.interests}</div>
+              <div><Languages className="inline w-4 h-4 mr-1 text-pink-600" /> <span className="font-semibold">Langues :</span> {typeof profile.languages === 'string' ? profile.languages.replace(/[{}"\\]/g, '').split(',').join(', ') : Array.isArray(profile.languages) ? profile.languages.join(', ') : ''}</div>
+              <div><span className="font-semibold">Bio :</span> {profile.bio}</div>
+              <div><span className="font-semibold">Étudiant ou travailleur :</span> {profile.study_or_work}</div>
+              <div><span className="font-semibold">Genre :</span> {profile.gender_identity}</div>
+              <div><span className="font-semibold">Préférence de genre :</span> {profile.roommate_gender_preference}</div>
+              <div><span className="font-semibold">Préférences culturelles :</span> {profile.cultural_dietary_notes}</div>
+            </CardContent>
+          </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="university">Université</Label>
-                    <Select value={profile.university} onValueChange={(value) => setProfile({...profile, university: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Université de Tunis El Manar">Université de Tunis El Manar</SelectItem>
-                        <SelectItem value="ENIS Sfax">ENIS Sfax</SelectItem>
-                        <SelectItem value="INSAT">INSAT</SelectItem>
-                        <SelectItem value="ESPRIT">ESPRIT</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          {/* Section Mode de vie */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-700"><Smile className="w-5 h-5" /> Mode de vie</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><Clock className="inline w-4 h-4 mr-1 text-purple-600" /> <span className="font-semibold">Heure de coucher :</span> {profile.sleep_time}</div>
+              <div><span className="font-semibold">Sociabilité :</span> {profile.social_behavior}</div>
+              <div><span className="font-semibold">Fréquence de ménage :</span> {profile.clean_frequency}</div>
+              <div><span className="font-semibold">Niveau de bruit :</span> {profile.noise_level}</div>
+              <div><span className="font-semibold">Fumeur :</span> <YesNo value={profile.smoke_status} /></div>
+              <div><span className="font-semibold">Accepte coloc fumeur :</span> <YesNo value={profile.accept_smoking_roommate} /></div>
+              <div><span className="font-semibold">Animaux :</span> {profile.pets_preference}</div>
+              <div><span className="font-semibold">Respect :</span> {profile.importance_respect}/5</div>
+              <div><span className="font-semibold">Communication :</span> {profile.importance_communication}/5</div>
+              <div><span className="font-semibold">Vie privée :</span> {profile.importance_privacy}/5</div>
+              <div><span className="font-semibold">Vie partagée :</span> {profile.importance_shared_activities}/5</div>
+              <div><span className="font-semibold">Environnement calme :</span> {profile.importance_quiet}/5</div>
+            </CardContent>
+          </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="field">Filière d'études</Label>
-                    <Input 
-                      id="field" 
-                      value={profile.field}
-                      onChange={(e) => setProfile({...profile, field: e.target.value})}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea 
-                      id="description" 
-                      placeholder="Parlez de vous..."
-                      value={profile.description}
-                      onChange={(e) => setProfile({...profile, description: e.target.value})}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="preferences" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="w-5 h-5 mr-2" />
-                    Préférences de logement
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="budget">Budget mensuel (TND)</Label>
-                    <div className="relative">
-                      <Euro className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        id="budget" 
-                        type="number"
-                        placeholder="400"
-                        className="pl-10"
-                        value={profile.budget}
-                        onChange={(e) => setProfile({...profile, budget: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Préférences de quartier</Label>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">Proche université</Badge>
-                      <Badge variant="outline">Transport en commun</Badge>
-                      <Badge variant="outline">Centre-ville</Badge>
-                      <Badge variant="outline">Calme</Badge>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Type de logement préféré</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="studio">Studio partagé</SelectItem>
-                        <SelectItem value="2pieces">2 pièces</SelectItem>
-                        <SelectItem value="3pieces">3 pièces</SelectItem>
-                        <SelectItem value="maison">Maison</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="lifestyle" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Clock className="w-5 h-5 mr-2" />
-                    Habitudes de vie
-                  </CardTitle>
-                  <CardDescription>
-                    Ces informations nous aident à trouver le colocataire le plus compatible
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="sleepTime">Heure de coucher</Label>
-                      <Input 
-                        id="sleepTime" 
-                        type="time"
-                        value={profile.sleepTime}
-                        onChange={(e) => setProfile({...profile, sleepTime: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="wakeTime">Heure de réveil</Label>
-                      <Input 
-                        id="wakeTime" 
-                        type="time"
-                        value={profile.wakeTime}
-                        onChange={(e) => setProfile({...profile, wakeTime: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {profile.isSmoker ? <Cigarette className="w-5 h-5" /> : <CigaretteOff className="w-5 h-5" />}
-                        <Label htmlFor="smoking">Je fume</Label>
-                      </div>
-                      <Switch 
-                        id="smoking"
-                        checked={profile.isSmoker}
-                        onCheckedChange={(checked) => setProfile({...profile, isSmoker: checked})}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Dog className="w-5 h-5" />
-                        <Label htmlFor="pets">J'accepte les animaux</Label>
-                      </div>
-                      <Switch 
-                        id="pets"
-                        checked={profile.allowsPets}
-                        onCheckedChange={(checked) => setProfile({...profile, allowsPets: checked})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Niveau de sociabilité</Label>
-                    <Select value={profile.socialLevel} onValueChange={(value) => setProfile({...profile, socialLevel: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="faible">
-                          <div className="flex items-center">
-                            <VolumeX className="w-4 h-4 mr-2" />
-                            Plutôt discret
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="moyen">
-                          <div className="flex items-center">
-                            <Volume2 className="w-4 h-4 mr-2" />
-                            Sociable modéré
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="haut">
-                          <div className="flex items-center">
-                            <Volume2 className="w-4 h-4 mr-2" />
-                            Très sociable
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Niveau de propreté</Label>
-                    <Select value={profile.cleanliness} onValueChange={(value) => setProfile({...profile, cleanliness: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="normale">Normale</SelectItem>
-                        <SelectItem value="haute">Très propre</SelectItem>
-                        <SelectItem value="perfectionniste">Perfectionniste</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex flex-col items-end space-y-2">
-                {error && <span className="text-red-500 text-sm">{error}</span>}
-                {success && <span className="text-green-600 text-sm">Profil mis à jour !</span>}
-                <Button
-                  variant="gradient"
-                  size="lg"
-                  disabled={loading}
-                  onClick={async () => {
-                    setError(null);
-                    setSuccess(false);
-                    try {
-                      const token = localStorage.getItem("binomiToken");
-                      if (!token) throw new Error("Token manquant");
-                      await updateProfile(token, profile);
-                      setSuccess(true);
-                    } catch (err: any) {
-                      setError(err?.response?.data?.message || err.message || "Erreur lors de la mise à jour");
-                    }
-                  }}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {loading ? "Chargement..." : "Sauvegarder le profil"}
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
+          {/* Section Infos */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-700"><Info className="w-5 h-5" /> Infos techniques</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500">
+              <div><span className="font-semibold">ID :</span> {profile.id}</div>
+              <div><span className="font-semibold">User ID :</span> {profile.user_id}</div>
+              <div><span className="font-semibold">Créé le :</span> {profile.created_at ? new Date(profile.created_at).toLocaleString() : ''}</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
