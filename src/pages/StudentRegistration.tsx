@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -47,24 +48,22 @@ const initialState = {
   quiet_environment: 3,
 };
 
+
 export default function StudentRegistration() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(initialState);
-  const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
+  const navigate = useNavigate();
 
   const handleChange = (field: string, value: any) => {
     setFormData(f => ({ ...f, [field]: value }));
   };
 
   const handleFinalSubmit = async () => {
-    setSubmitError("");
-    setSubmitSuccess(false);
     try {
       const token = localStorage.getItem("binomiToken");
-      // Mapping des champs frontend -> backend
       const payload = {
         university: formData.university,
         study_level: formData.study_level,
@@ -122,22 +121,12 @@ export default function StudentRegistration() {
       );
       setSubmitSuccess(true);
       setTimeout(() => {
-        window.location.href = "/matching";
+        navigate("/matching");
       }, 1000);
     } catch (err) {
-      setSubmitError("Erreur lors de l'envoi du profil. Veuillez réessayer.");
+      // Erreur d'envoi, mais pas de blocage sur les champs
     }
   };
-
-  // Validation simple par étape
-  let isNextDisabled = false;
-  if (step === 1) {
-    isNextDisabled = !formData.university || !formData.study_level || !formData.field_of_study || !formData.academic_year;
-  } else if (step === 2) {
-    isNextDisabled = !formData.sleep || !formData.social || !formData.clean || !formData.smoke;
-  } else if (step === 3) {
-    isNextDisabled = !formData.budget_min || !formData.budget_max || !formData.preferred_location || !formData.housing_type;
-  }
 
   return (
     <div className="w-full max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-lg mt-4 sm:mt-8">
@@ -332,12 +321,11 @@ export default function StudentRegistration() {
         <div className="sticky bottom-0 left-0 right-0 z-20 bg-white/90 pt-2 pb-4 px-2 border-t flex flex-col sm:flex-row sm:justify-between gap-2 shadow-[0_-2px_8px_-4px_rgba(0,0,0,0.08)]">
           <Button variant="outline" className="w-full sm:w-auto" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))}>Précédent</Button>
           {step < totalSteps ? (
-            <Button variant="gradient" className="w-full sm:w-auto" onClick={() => setStep(s => Math.min(totalSteps, s + 1))} disabled={isNextDisabled}>Suivant</Button>
+            <Button variant="gradient" className="w-full sm:w-auto" onClick={() => setStep(s => Math.min(totalSteps, s + 1))}>Suivant</Button>
           ) : (
             <Button variant="gradient" className="w-full sm:w-auto" onClick={handleFinalSubmit}>Créer mon profil</Button>
           )}
         </div>
-        {submitError && <div className="text-red-500 text-sm text-center mt-2">{submitError}</div>}
         {submitSuccess && <div className="text-green-600 text-sm text-center mt-2">Profil enregistré avec succès !</div>}
       </div>
     </div>
