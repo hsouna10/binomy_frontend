@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Users, Home, LogIn, UserPlus, Sun, Moon, UserCircle, LogOut } from "lucide-react";
+import { Users, Home, LogIn, UserPlus, Sun, Moon, UserCircle, LogOut, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
@@ -77,7 +77,7 @@ const Header = () => {
           </Link>
         </nav>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -152,6 +152,15 @@ const Header = () => {
               </Link>
             </>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = "/messages"}
+            className="flex items-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            Messages
+          </Button>
         </div>
       </div>
     </header>

@@ -117,6 +117,17 @@ const Messages = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          className="flex items-center gap-2"
+          onClick={() => window.location.href = "/messages"}
+        >
+          <Send className="w-4 h-4" />
+          Messages
+        </Button>
+      </div>
+
       <div className="container py-8">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-12 gap-6 h-[600px]">
