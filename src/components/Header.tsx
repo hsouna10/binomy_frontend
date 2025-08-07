@@ -106,7 +106,7 @@ const Header = () => {
             </button>
           </div>
           {user ? (
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
               <button
                 className="flex items-center focus:outline-none"
                 onClick={() => setMenuOpen(v => !v)}
@@ -135,6 +135,15 @@ const Header = () => {
                   </button>
                 </div>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = "/messages"}
+                className="flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Messages
+              </Button>
             </div>
           ) : (
             <>
@@ -152,15 +161,6 @@ const Header = () => {
               </Link>
             </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.location.href = "/messages"}
-            className="flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Messages
-          </Button>
         </div>
       </div>
     </header>
