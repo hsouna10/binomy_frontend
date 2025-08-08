@@ -169,6 +169,7 @@ const Auth = () => {
                         const data = res.data;
                         localStorage.setItem("binomiUser", JSON.stringify(data.user));
                         localStorage.setItem("binomiToken", data.token);
+                        localStorage.setItem("studentId", data.user.id); // ou user.studentId selon ta structure
                         navigate("/matching");
                       } catch (err) {
                         setLoginError("Erreur serveur");
