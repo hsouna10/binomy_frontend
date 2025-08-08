@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
+import MatchCircle from "@/components/MatchCircle";
+import MatchModal from "@/components/MatchModal";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Search, 
   Send, 
@@ -13,12 +16,32 @@ import {
   Video, 
   Info,
   Home,
-  Heart
+  Heart,
+  Users
 } from "lucide-react";
+
+interface Match {
+  id: string;
+  name: string;
+  compatibility: number;
+  avatar?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  newMatch?: boolean;
+  age?: number;
+  school?: string;
+  location?: string;
+  interests?: string[];
+  description?: string;
+}
 
 const Messages = () => {
   const [selectedChat, setSelectedChat] = useState(0);
   const [newMessage, setNewMessage] = useState("");
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const conversations = [
     {
@@ -104,7 +127,132 @@ const Messages = () => {
     }
   ];
 
+  // Mock data for matches
+  useEffect(() => {
+    // Simulating API call
+    const mockMatches: Match[] = [
+      {
+        id: "1",
+        name: "Ahmed Cherif",
+        compatibility: 89,
+        status: 'pending',
+        newMatch: true,
+        age: 22,
+        school: "ESPRIT",
+        location: "Tunis",
+        interests: ["Gaming", "Cinéma", "Sport"],
+        description: "Étudiant en informatique cherchant un colocataire sympa pour partager un appartement près du campus."
+      },
+      {
+        id: "2", 
+        name: "Leila Mansouri",
+        compatibility: 76,
+        status: 'pending',
+        newMatch: true,
+        age: 20,
+        school: "ENIT",
+        location: "Tunis",
+        interests: ["Lecture", "Voyage", "Cuisine"],
+        description: "Passionnée de littérature, je cherche quelqu'un de calme pour partager un logement."
+      },
+      {
+        id: "3",
+        name: "Karim Zouari", 
+        compatibility: 94,
+        status: 'accepted',
+        age: 23,
+        school: "ISET",
+        location: "Ariana",
+        interests: ["Musique", "Fitness", "Tech"]
+      },
+      {
+        id: "4",
+        name: "Nour Trabelsi",
+        compatibility: 68,
+        status: 'rejected',
+        age: 21,
+        school: "FST",
+        location: "Tunis",
+        interests: ["Art", "Danse", "Mode"]
+      }
+    ];
+    setMatches(mockMatches);
+  }, []);
+
+  const fetchMatches = async () => {
+    try {
+      // Replace with actual API call
+      // const response = await fetch('http://localhost:5000/api/matches/studentId');
+      // const data = await response.json();
+      // setMatches(data);
+    } catch (error) {
+      console.error('Error fetching matches:', error);
+    }
+  };
+
+  const handleAcceptMatch = async (matchId: string) => {
+    setIsLoading(true);
+    try {
+      // Replace with actual API call
+      // await fetch(`http://localhost:5000/api/matches/${matchId}/accept`, { method: 'POST' });
+      
+      setMatches(prev => prev.map(match => 
+        match.id === matchId ? { ...match, status: 'accepted' } : match
+      ));
+      
+      toast({
+        title: "Match accepté !",
+        description: "Vous pouvez maintenant discuter avec cette personne.",
+        variant: "default"
+      });
+      
+      setIsModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accepter le match. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRejectMatch = async (matchId: string) => {
+    setIsLoading(true);
+    try {
+      // Replace with actual API call
+      // await fetch(`http://localhost:5000/api/matches/${matchId}/reject`, { method: 'POST' });
+      
+      setMatches(prev => prev.map(match => 
+        match.id === matchId ? { ...match, status: 'rejected' } : match
+      ));
+      
+      toast({
+        title: "Match rejeté",
+        description: "Le match a été rejeté.",
+        variant: "default"
+      });
+      
+      setIsModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erreur", 
+        description: "Impossible de rejeter le match. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMatchClick = (match: Match) => {
+    setSelectedMatch(match);
+    setIsModalOpen(true);
+  };
+
   const currentConversation = conversations[selectedChat];
+  const pendingMatches = matches.filter(m => m.status === 'pending');
 
   const sendMessage = () => {
     if (newMessage.trim()) {
@@ -117,19 +265,37 @@ const Messages = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <div className="flex justify-end mb-4">
-        <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => window.location.href = "/messages"}
-        >
-          <Send className="w-4 h-4" />
-          Messages
-        </Button>
-      </div>
-
       <div className="container py-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Matches Section */}
+          {pendingMatches.length > 0 && (
+            <Card className="shadow-match">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    <span>Nouveaux Matches</span>
+                  </div>
+                  <Badge variant="outline" className="bg-gradient-primary text-white border-0">
+                    {pendingMatches.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex space-x-6 overflow-x-auto pb-4">
+                  {matches.map((match) => (
+                    <MatchCircle
+                      key={match.id}
+                      match={match}
+                      onClick={() => handleMatchClick(match)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Messages Section */}
           <div className="grid grid-cols-12 gap-6 h-[600px]">
             {/* Conversations List */}
             <Card className="col-span-4">
@@ -148,7 +314,7 @@ const Messages = () => {
                   {conversations.map((conversation, index) => (
                     <div
                       key={conversation.id}
-                      className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                      className={`p-4 cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
                         selectedChat === index ? 'bg-muted' : ''
                       }`}
                       onClick={() => setSelectedChat(index)}
@@ -157,12 +323,12 @@ const Messages = () => {
                         <div className="relative">
                           <Avatar>
                             <AvatarImage src="" />
-                            <AvatarFallback>
+                            <AvatarFallback className="bg-gradient-secondary text-white">
                               {conversation.name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
                           {conversation.online && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-background" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -175,7 +341,7 @@ const Messages = () => {
                                 {conversation.time}
                               </span>
                               {conversation.unread > 0 && (
-                                <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                                <Badge className="text-xs px-1.5 py-0.5 bg-gradient-danger text-white border-0">
                                   {conversation.unread}
                                 </Badge>
                               )}
@@ -187,7 +353,7 @@ const Messages = () => {
                             </p>
                             {conversation.matchType === "roommate" && (
                               <div className="flex items-center space-x-1">
-                                <Heart className="w-3 h-3 text-red-500" />
+                                <Heart className="w-3 h-3 text-primary" />
                                 <span className="text-xs text-muted-foreground">
                                   {conversation.compatibility}%
                                 </span>
@@ -210,7 +376,7 @@ const Messages = () => {
                   <div className="flex items-center space-x-3">
                     <Avatar>
                       <AvatarImage src="" />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-gradient-secondary text-white">
                         {currentConversation.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
@@ -218,13 +384,13 @@ const Messages = () => {
                       <h3 className="font-medium">{currentConversation.name}</h3>
                       <div className="flex items-center space-x-2">
                         {currentConversation.online && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                          <div className="w-2 h-2 bg-success rounded-full" />
                         )}
                         <span className="text-xs text-muted-foreground">
                           {currentConversation.online ? "En ligne" : "Vu récemment"}
                         </span>
                         {currentConversation.matchType === "roommate" && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-primary text-primary">
                             Match {currentConversation.compatibility}%
                           </Badge>
                         )}
@@ -258,18 +424,18 @@ const Messages = () => {
                     <div className="flex items-end space-x-2 max-w-xs">
                       {message.sender === "other" && (
                         <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs">Y</AvatarFallback>
+                          <AvatarFallback className="text-xs bg-gradient-secondary text-white">Y</AvatarFallback>
                         </Avatar>
                       )}
                       <div
-                        className={`px-3 py-2 rounded-lg text-sm ${
+                        className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                           message.sender === "me"
                             ? "bg-gradient-primary text-white"
                             : "bg-muted"
                         }`}
                       >
                         {message.type === "housing-link" ? (
-                          <div className="flex items-center space-x-2 p-2 border rounded cursor-pointer hover:bg-background/80">
+                          <div className="flex items-center space-x-2 p-2 border rounded cursor-pointer hover:bg-background/80 transition-colors">
                             <Home className="w-4 h-4" />
                             <span>{message.content}</span>
                           </div>
@@ -282,7 +448,7 @@ const Messages = () => {
                       </div>
                       {message.sender === "me" && (
                         <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs">S</AvatarFallback>
+                          <AvatarFallback className="text-xs bg-gradient-primary text-white">S</AvatarFallback>
                         </Avatar>
                       )}
                     </div>
@@ -309,6 +475,16 @@ const Messages = () => {
           </div>
         </div>
       </div>
+
+      {/* Match Modal */}
+      <MatchModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        match={selectedMatch}
+        onAccept={handleAcceptMatch}
+        onReject={handleRejectMatch}
+        isLoading={isLoading}
+      />
     </div>
   );
 };
