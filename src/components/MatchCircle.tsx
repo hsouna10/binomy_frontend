@@ -13,63 +13,70 @@ interface MatchCircleProps {
   onClick: () => void;
 }
 
-const MatchCircle = ({ match, onClick }: MatchCircleProps) => {
-  const getStatusColor = () => {
-    switch (match.status) {
-      case 'pending':
-        return 'border-match-pending shadow-match';
-      case 'accepted':
-        return 'border-match-accepted shadow-success';
-      case 'rejected':
-        return 'border-match-rejected shadow-danger';
-      default:
-        return 'border-primary shadow-match';
-    }
-  };
+const getCircleColor = (compatibility: number) => {
+  if (compatibility >= 80) return "border-[#7D3CFF] shadow-[0_0_0_4px_#e9e1fa]";
+  if (compatibility >= 60) return "border-[#00D97E] shadow-[0_0_0_4px_#e1faed]";
+  return "border-[#FF5C8E] shadow-[0_0_0_4px_#fae1ed]";
+};
 
+const getBadgeColor = (compatibility: number) => {
+  if (compatibility >= 80) return "bg-[#7D3CFF]";
+  if (compatibility >= 60) return "bg-[#00D97E]";
+  return "bg-[#FF5C8E]";
+};
+
+const getStatusText = (status: string) => {
+  if (status === "pending") return "En Attente";
+  if (status === "accepted") return "Accepté";
+  return "Rejeté";
+};
+
+const MatchCircle = ({ match, onClick }: MatchCircleProps) => {
   return (
     <div className="flex flex-col items-center space-y-2">
-      <div 
-        className={`relative cursor-pointer transition-all duration-300 hover:scale-105 ${
-          match.newMatch ? 'animate-pulse-match' : ''
-        }`}
+      <div
+        className={`relative cursor-pointer transition-all duration-300 hover:scale-105`}
         onClick={onClick}
       >
-        <div className={`p-1 rounded-full border-4 ${getStatusColor()}`}>
+        <div
+          className={`w-20 h-20 rounded-full border-4 flex items-center justify-center bg-white ${getCircleColor(
+            match.compatibility
+          )}`}
+        >
           <Avatar className="w-16 h-16">
             <AvatarImage src={match.avatar} />
-            <AvatarFallback className="bg-gradient-primary text-white text-lg font-semibold">
-              {match.name.split(' ').map(n => n[0]).join('')}
+            <AvatarFallback className="bg-[#7D3CFF] text-white text-lg font-semibold">
+              {match.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </div>
-        
-        {match.newMatch && (
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-danger rounded-full flex items-center justify-center animate-bounce-soft">
-            <span className="text-white text-xs font-bold">!</span>
-          </div>
-        )}
-        
-        <Badge 
-          className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 text-xs px-2 py-1 ${
-            match.compatibility >= 80 
-              ? 'bg-gradient-success' 
-              : match.compatibility >= 60 
-              ? 'bg-gradient-primary' 
-              : 'bg-gradient-secondary'
-          } text-white border-0`}
+        <Badge
+          className={`absolute left-1/2 -bottom-3 -translate-x-1/2 px-3 py-1 text-xs font-semibold text-white border-0 ${getBadgeColor(
+            match.compatibility
+          )} shadow`}
         >
-          {match.compatibility}%
+          {match.compatibility}% Match
         </Badge>
       </div>
-      
-      <div className="text-center">
-        <p className="text-sm font-medium text-foreground truncate max-w-[80px]">
-          {match.name.split(' ')[0]}
+      <div className="text-center mt-2">
+        <p className="text-sm font-bold text-[#7D3CFF] truncate max-w-[80px]">
+          {match.name}
         </p>
-        <p className="text-xs text-muted-foreground capitalize">
-          {match.status === 'pending' ? 'En attente' : 
-           match.status === 'accepted' ? 'Accepté' : 'Rejeté'}
+        <p
+          className={`text-xs font-medium ${
+            match.status === "pending"
+              ? "text-[#7D3CFF]"
+              : match.status === "accepted"
+              ? "text-[#00D97E]"
+              : "text-[#FF5C8E]"
+          }`}
+        >
+          {getStatusText(match.status)}
         </p>
       </div>
     </div>

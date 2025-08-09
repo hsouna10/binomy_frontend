@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import MatchCircle from "@/components/MatchCircle";
+import MatchModal from "@/components/MatchModal";
+import { useToast } from "@/components/ui/use-toast";
 import { Send, Users } from "lucide-react";
 
 interface Match {
@@ -16,77 +18,276 @@ interface Match {
   created_at: string;
   updated_at: string;
   status: 'pending' | 'accepted' | 'rejected';
+  name?: string;
+  compatibility?: number;
+  avatar?: string;
+  newMatch?: boolean;
+  age?: number;
+  school?: string;
+  location?: string;
+  interests?: string[];
+  description?: string;
+}
+
+interface FormattedMatch {
+  id: string;
+  name: string;
+  compatibility: number;
+  avatar?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  newMatch?: boolean;
+  student1_id: string;
+  student2_id: string;
+  match_score: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Conversation {
+  id: string;
+  student1_id: string;
+  student2_id: string;
+  match_id: string;
+  created_at: string;
+  updated_at: string;
+  student1_name?: string;
+  student1_avatar?: string;
+  student2_name?: string;
+  student2_avatar?: string;
+  unread_count?: number;
+  last_message_time?: string;
 }
 
 interface Message {
   id: string;
-  sender: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_name?: string;
+  sender_avatar?: string;
   content: string;
-  timestamp: string;
+  read: boolean;
+  created_at: string;
 }
 
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    sender: "Lucas",
-    content: "Salut ! Ravi qu'on ait matché ! Comment ça va ?",
-    timestamp: "14:30",
-  },
-  {
-    id: "2",
-    sender: "me",
-    content: "Salut Lucas ! Ça va très bien merci, et toi ?",
-    timestamp: "14:35",
-  },
-  {
-    id: "3",
-    sender: "Lucas",
-    content: "Super ! Tu es dans quelle filière exactement ?",
-    timestamp: "14:40",
-  },
-];
-
 const Messages = () => {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [matches, setMatches] = useState<FormattedMatch[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<FormattedMatch | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const currentStudentId = localStorage.getItem("studentId");
 
   useEffect(() => {
-    const studentId = localStorage.getItem("studentId");
-    if (!studentId) return;
-    fetch(`http://localhost:5000/matches/matches/${studentId}`)
-      .then(res => res.json())
-      .then(data => setMatches(data.matches))
-      .catch(err => console.error("Erreur récupération nouveaux matchs:", err));
-  }, []);
+    if (!currentStudentId) return;
+    
+    // Charger les matches
+    fetchMatches();
+    // Charger les conversations
+    fetchConversations();
+  }, [currentStudentId]);
 
-  useEffect(() => {
-    if (selectedMatch) {
-      setMessages(mockMessages); // Remplace par un appel API pour les vrais messages si besoin
+  const fetchMatches = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/matches/matches/${currentStudentId}`);
+      const data = await response.json();
+      
+      if (data.matches) {
+        const formatted: FormattedMatch[] = data.matches.map((m: Match, i: number) => ({
+          ...m,
+          name: m.name || `Match ${i + 1}`,
+          compatibility: Number(m.match_score) || 0,
+          newMatch: m.status === "pending",
+        }));
+        setMatches(formatted);
+      }
+    } catch (error) {
+      console.error("Erreur récupération matches:", error);
     }
-  }, [selectedMatch]);
+  };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    setMessages([
-      ...messages,
-      {
-        id: Date.now().toString(),
-        sender: "me",
-        content: newMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
-    setNewMessage("");
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/conversations/${currentStudentId}`);
+      const data = await response.json();
+      
+      console.log('🔍 Conversations récupérées:', data);
+      
+      if (data.conversations) {
+        setConversations(data.conversations);
+      }
+    } catch (error) {
+      console.error("Erreur récupération conversations:", error);
+    }
+  };
+
+  const fetchMessages = async (conversationId: string) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/conversations/${conversationId}/messages?studentId=${currentStudentId}`);
+      const data = await response.json();
+      
+      if (data.messages) {
+        setMessages(data.messages);
+      }
+    } catch (error) {
+      console.error("Erreur récupération messages:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || !currentStudentId) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/conversations/${selectedConversation.id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          senderId: currentStudentId,
+          content: newMessage,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, data.newMessage]);
+        setNewMessage("");
+        
+        // Recharger les conversations pour mettre à jour la dernière activité
+        fetchConversations();
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible d'envoyer le message. Veuillez réessayer.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erreur envoi message:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer le message. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleMatchClick = async (match: FormattedMatch) => {
+    setIsLoading(true);
+    try {
+      setSelectedMatch(match);
+      setIsModalOpen(true);
+    } catch (error) {
+      setSelectedMatch(match);
+      setIsModalOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAcceptMatch = async (matchId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:5000/matches/matches/${matchId}/accept`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        setMatches(prev => prev.map(match =>
+          match.id === matchId ? { ...match, status: 'accepted', newMatch: false } : match
+        ));
+        
+        // Recharger les conversations car une nouvelle conversation a été créée
+        fetchConversations();
+        
+        toast({
+          title: "Match accepté !",
+          description: "Vous pouvez maintenant discuter avec cette personne.",
+          variant: "default"
+        });
+        setIsModalOpen(false);
+      } else {
+        throw new Error('Erreur lors de l\'acceptation du match');
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accepter le match. Veuillez réessayer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRejectMatch = async (matchId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:5000/matches/matches/${matchId}/reject`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        setMatches(prev =>
+          prev.map(match =>
+            match.id === matchId ? { ...match, status: "rejected", newMatch: false } : match
+          )
+        );
+        toast({
+          title: "Match rejeté",
+          description: "Le match a été rejeté.",
+          variant: "default",
+        });
+        setIsModalOpen(false);
+      } else {
+        throw new Error('Erreur lors du rejet du match');
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejeter le match. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getConversationDisplayName = (conversation: Conversation) => {
+    if (conversation.student1_id === currentStudentId) {
+      return conversation.student2_name || `Étudiant ${conversation.student2_id}`;
+    } else {
+      return conversation.student1_name || `Étudiant ${conversation.student1_id}`;
+    }
+  };
+
+  const getConversationAvatar = (conversation: Conversation) => {
+    if (conversation.student1_id === currentStudentId) {
+      return conversation.student2_avatar;
+    } else {
+      return conversation.student1_avatar;
+    }
   };
 
   const pendingMatches = matches.filter(m => m.status === "pending");
+  // Afficher toutes les conversations qui ont un match_id (donc des conversations valides)
+  const acceptedConversations = conversations.filter(c => c.match_id && c.match_id !== null && c.match_id !== undefined);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
       <div className="container py-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Matches Section */}
@@ -108,14 +309,8 @@ const Messages = () => {
                   {pendingMatches.map((match) => (
                     <MatchCircle
                       key={match.id}
-                      match={{
-                        id: match.id,
-                        name: `Match ${match.id.slice(0, 4)}`,
-                        compatibility: Number(match.match_score),
-                        status: match.status,
-                        newMatch: match.status === "pending",
-                      }}
-                      onClick={() => setSelectedMatch(match)}
+                      match={match}
+                      onClick={() => handleMatchClick(match)}
                     />
                   ))}
                 </div>
@@ -132,32 +327,47 @@ const Messages = () => {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-1">
-                  {matches.map((match) => (
-                    <div
-                      key={match.id}
-                      className={`p-4 cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
-                        selectedMatch?.id === match.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedMatch(match)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Avatar>
-                          <AvatarImage src="" />
-                          <AvatarFallback className="bg-gradient-secondary text-white">
-                            {`M${match.id.slice(0, 2)}`}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-sm truncate">{`Match ${match.id.slice(0, 4)}`}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {match.status === "pending"
-                              ? "Nouveau match !"
-                              : "Conversation"}
+                  {acceptedConversations.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      Aucune conversation pour le moment. Acceptez des matches pour commencer !
+                    </div>
+                  ) : (
+                    acceptedConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className={`p-4 cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
+                          selectedConversation?.id === conversation.id ? "bg-muted" : ""
+                        }`}
+                        onClick={() => setSelectedConversation(conversation)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="relative">
+                            <Avatar>
+                              <AvatarImage src={getConversationAvatar(conversation)} />
+                              <AvatarFallback className="bg-gradient-secondary text-white">
+                                {getConversationDisplayName(conversation)?.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            {conversation.unread_count && conversation.unread_count > 0 && (
+                              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                                {conversation.unread_count}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {getConversationDisplayName(conversation)}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {conversation.last_message_time 
+                                ? new Date(conversation.last_message_time).toLocaleDateString()
+                                : "Nouvelle conversation"}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -167,24 +377,20 @@ const Messages = () => {
               <CardHeader className="border-b">
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarImage src="" />
+                    <AvatarImage src={selectedConversation ? getConversationAvatar(selectedConversation) : ""} />
                     <AvatarFallback className="bg-gradient-secondary text-white">
-                      {selectedMatch ? `M${selectedMatch.id.slice(0, 2)}` : ""}
+                      {selectedConversation ? getConversationDisplayName(selectedConversation)?.split(' ').map(n => n[0]).join('') : ""}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-medium">
-                      {selectedMatch
-                        ? `Match ${selectedMatch.id.slice(0, 4)}`
-                        : "Sélectionnez un match"}
+                      {selectedConversation
+                        ? getConversationDisplayName(selectedConversation)
+                        : "Sélectionnez une conversation"}
                     </h3>
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-muted-foreground">
-                        {selectedMatch
-                          ? selectedMatch.status === "pending"
-                            ? "Nouveau match"
-                            : "En conversation"
-                          : ""}
+                        {selectedConversation ? "En conversation" : ""}
                       </span>
                     </div>
                   </div>
@@ -193,7 +399,7 @@ const Messages = () => {
 
               {/* Messages */}
               <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                {selectedMatch ? (
+                {selectedConversation ? (
                   messages.length === 0 ? (
                     <div className="text-muted-foreground text-center py-8">
                       Aucun message. Commencez la conversation !
@@ -202,30 +408,32 @@ const Messages = () => {
                     messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                        className={`flex ${msg.sender_id === currentStudentId ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={`rounded-xl px-4 py-2 max-w-xs ${
-                            msg.sender === "me"
+                            msg.sender_id === currentStudentId
                               ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
                               : "bg-slate-100 text-slate-800 border"
                           }`}
                         >
                           <div>{msg.content}</div>
-                          <div className="text-xs mt-1 text-right opacity-60">{msg.timestamp}</div>
+                          <div className="text-xs mt-1 text-right opacity-60">
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </div>
                         </div>
                       </div>
                     ))
                   )
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                    Sélectionnez un match pour voir la conversation.
+                    Sélectionnez une conversation pour voir les messages.
                   </div>
                 )}
               </CardContent>
 
               {/* Message Input */}
-              {selectedMatch && (
+              {selectedConversation && (
                 <div className="border-t p-4">
                   <div className="flex space-x-2">
                     <Input
@@ -245,6 +453,16 @@ const Messages = () => {
           </div>
         </div>
       </div>
+
+      {/* Match Modal */}
+      <MatchModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        match={selectedMatch}
+        onAccept={handleAcceptMatch}
+        onReject={handleRejectMatch}
+        isLoading={isLoading}
+      />
     </div>
   );
 };
