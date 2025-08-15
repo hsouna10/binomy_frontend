@@ -15,7 +15,7 @@ interface Match {
   match_score: string;
   created_at: string;
   updated_at: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
 }
 
 interface Message {
@@ -25,68 +25,87 @@ interface Message {
   timestamp: string;
 }
 
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    sender: "Lucas",
-    content: "Salut ! Ravi qu'on ait matché ! Comment ça va ?",
-    timestamp: "14:30",
-  },
-  {
-    id: "2",
-    sender: "me",
-    content: "Salut Lucas ! Ça va très bien merci, et toi ?",
-    timestamp: "14:35",
-  },
-  {
-    id: "3",
-    sender: "Lucas",
-    content: "Super ! Tu es dans quelle filière exactement ?",
-    timestamp: "14:40",
-  },
-];
-
 const Messages = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
 
+  // Récupérer tous les matchs de l'étudiant connecté
   useEffect(() => {
     const studentId = localStorage.getItem("studentId");
     if (!studentId) return;
+
     fetch(`http://localhost:5000/matches/matches/${studentId}`)
-      .then(res => res.json())
-      .then(data => setMatches(data.matches))
-      .catch(err => console.error("Erreur récupération nouveaux matchs:", err));
+      .then((res) => res.json())
+      .then((data) => setMatches(data.matches))
+      .catch((err) =>
+        console.error("Erreur récupération des matchs :", err)
+      );
   }, []);
 
+  // Récupérer les messages d’un match sélectionné
   useEffect(() => {
-    if (selectedMatch) {
-      setMessages(mockMessages); // Remplace par un appel API pour les vrais messages si besoin
-    }
+    if (!selectedMatch) return;
+
+    fetch(`http://localhost:5000/messages/${selectedMatch.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.messages.map((m: any) => ({
+          id: m.id,
+          sender: m.sender,
+          content: m.content,
+          timestamp: new Date(m.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        }));
+        setMessages(formatted);
+      })
+      .catch((err) =>
+        console.error("Erreur récupération des messages :", err)
+      );
   }, [selectedMatch]);
 
+  // Envoyer un message
   const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    setMessages([
-      ...messages,
-      {
-        id: Date.now().toString(),
-        sender: "me",
-        content: newMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
-    setNewMessage("");
+    if (!newMessage.trim() || !selectedMatch) return;
+
+    const messageToSend = {
+      matchId: selectedMatch.id,
+      sender: "me",
+      content: newMessage.trim(),
+    };
+
+    fetch(`http://localhost:5000/messages/${selectedMatch.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(messageToSend),
+    })
+      .then((res) => res.json())
+      .then((savedMessage) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: savedMessage.id,
+            sender: savedMessage.sender,
+            content: savedMessage.content,
+            timestamp: new Date(savedMessage.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+        ]);
+        setNewMessage("");
+      })
+      .catch((err) => console.error("Erreur envoi message :", err));
   };
 
-  const pendingMatches = matches.filter(m => m.status === "pending");
+  const pendingMatches = matches.filter((m) => m.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
       <div className="container py-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Matches Section */}
@@ -98,7 +117,10 @@ const Messages = () => {
                     <Users className="w-5 h-5 text-primary" />
                     <span>Nouveaux Matches</span>
                   </div>
-                  <Badge variant="outline" className="bg-gradient-primary text-white border-0">
+                  <Badge
+                    variant="outline"
+                    className="bg-gradient-primary text-white border-0"
+                  >
                     {pendingMatches.length}
                   </Badge>
                 </CardTitle>
@@ -148,7 +170,9 @@ const Messages = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-sm truncate">{`Match ${match.id.slice(0, 4)}`}</div>
+                          <div className="font-medium text-sm truncate">
+                            {`Match ${match.id.slice(0, 4)}`}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {match.status === "pending"
                               ? "Nouveau match !"
@@ -169,7 +193,9 @@ const Messages = () => {
                   <Avatar>
                     <AvatarImage src="" />
                     <AvatarFallback className="bg-gradient-secondary text-white">
-                      {selectedMatch ? `M${selectedMatch.id.slice(0, 2)}` : ""}
+                      {selectedMatch
+                        ? `M${selectedMatch.id.slice(0, 2)}`
+                        : ""}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -202,7 +228,11 @@ const Messages = () => {
                     messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                          msg.sender === "me"
+                            ? "justify-end"
+                            : "justify-start"
+                        }`}
                       >
                         <div
                           className={`rounded-xl px-4 py-2 max-w-xs ${
@@ -212,7 +242,9 @@ const Messages = () => {
                           }`}
                         >
                           <div>{msg.content}</div>
-                          <div className="text-xs mt-1 text-right opacity-60">{msg.timestamp}</div>
+                          <div className="text-xs mt-1 text-right opacity-60">
+                            {msg.timestamp}
+                          </div>
                         </div>
                       </div>
                     ))
@@ -232,7 +264,9 @@ const Messages = () => {
                       placeholder="Tapez votre message..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleSendMessage()
+                      }
                       className="flex-1"
                     />
                     <Button onClick={handleSendMessage} variant="gradient">
