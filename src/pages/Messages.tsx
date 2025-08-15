@@ -120,34 +120,33 @@ const Messages = () => {
                 <CardTitle>Conversations</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="space-y-1">
-                  {matches.map((match) => (
-                    <div
-                      key={match.id}
-                      className={`p-4 cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
-                        selectedMatch?.id === match.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => setSelectedMatch(match)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Avatar>
-                          <AvatarImage src="" />
-                          <AvatarFallback className="bg-gradient-secondary text-white">
-                            {`M${match.id.slice(0, 2)}`}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-sm truncate">{`Match ${match.id.slice(0, 4)}`}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {match.status === "pending"
-                              ? "Nouveau match !"
-                              : "Conversation"}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {matches.map((match) => (
+  <div
+    key={match.id}
+    className={`p-4 cursor-pointer transition-all duration-300 hover:bg-muted/50 ${
+      selectedMatch?.id === match.id ? "bg-muted" : ""
+    }`}
+    onClick={() => setSelectedMatch(match)}
+  >
+    <div className="flex items-center space-x-3">
+      <Avatar>
+        <AvatarImage src="" />
+        <AvatarFallback className="bg-gradient-secondary text-white">
+          {`M${match.id.slice(0, 2)}`}
+        </AvatarFallback>
+      </Avatar>
+      <div>
+        <div className="font-medium text-sm truncate">{`Match ${match.id.slice(0, 4)}`}</div>
+        <div className="text-xs text-muted-foreground">
+          {match.status === "pending"
+            ? "Nouveau match !"
+            : "Conversation"}
+        </div>
+      </div>
+    </div>
+  </div>
+))}
+
               </CardContent>
             </Card>
 
