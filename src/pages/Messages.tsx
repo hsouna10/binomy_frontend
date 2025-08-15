@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import MatchCircle from "@/components/MatchCircle";
+import MatchModal from "@/components/MatchModal";
+import { useToast } from "@/components/ui/use-toast";
 import { Send, Users } from "lucide-react";
 
 interface Match {
@@ -15,93 +17,64 @@ interface Match {
   match_score: string;
   created_at: string;
   updated_at: string;
-  status: "pending" | "accepted" | "rejected";
+  status: 'pending' | 'accepted' | 'rejected';
 }
 
 interface Message {
   id: string;
-  sender: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_name?: string;
+  sender_avatar?: string;
   content: string;
-  timestamp: string;
+  read: boolean;
+  created_at: string;
 }
 
 const Messages = () => {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [matches, setMatches] = useState<FormattedMatch[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<FormattedMatch | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const currentStudentId = localStorage.getItem("studentId");
 
   // Récupérer tous les matchs de l'étudiant connecté
   useEffect(() => {
     const studentId = localStorage.getItem("studentId");
     if (!studentId) return;
-
     fetch(`http://localhost:5000/matches/matches/${studentId}`)
-      .then((res) => res.json())
-      .then((data) => setMatches(data.matches))
-      .catch((err) =>
-        console.error("Erreur récupération des matchs :", err)
-      );
+      .then(res => res.json())
+      .then(data => setMatches(data.matches))
+      .catch(err => console.error("Erreur récupération nouveaux matchs:", err));
   }, []);
 
   // Récupérer les messages d’un match sélectionné
   useEffect(() => {
-    if (!selectedMatch) return;
-
-    fetch(`http://localhost:5000/messages/${selectedMatch.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.messages.map((m: any) => ({
-          id: m.id,
-          sender: m.sender,
-          content: m.content,
-          timestamp: new Date(m.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        }));
-        setMessages(formatted);
-      })
-      .catch((err) =>
-        console.error("Erreur récupération des messages :", err)
-      );
+    if (selectedMatch) {
+      setMessages(mockMessages); // Remplace par un appel API pour les vrais messages si besoin
+    }
   }, [selectedMatch]);
 
-  // Envoyer un message
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedMatch) return;
-
-    const messageToSend = {
-      matchId: selectedMatch.id,
-      sender: "me",
-      content: newMessage.trim(),
-    };
-
-    fetch(`http://localhost:5000/messages/${selectedMatch.id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(messageToSend),
-    })
-      .then((res) => res.json())
-      .then((savedMessage) => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: savedMessage.id,
-            sender: savedMessage.sender,
-            content: savedMessage.content,
-            timestamp: new Date(savedMessage.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          },
-        ]);
-        setNewMessage("");
-      })
-      .catch((err) => console.error("Erreur envoi message :", err));
+    if (!newMessage.trim()) return;
+    setMessages([
+      ...messages,
+      {
+        id: Date.now().toString(),
+        sender: "me",
+        content: newMessage,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+    setNewMessage("");
   };
 
-  const pendingMatches = matches.filter((m) => m.status === "pending");
+  const pendingMatches = matches.filter(m => m.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,14 +103,8 @@ const Messages = () => {
                   {pendingMatches.map((match) => (
                     <MatchCircle
                       key={match.id}
-                      match={{
-                        id: match.id,
-                        name: `Match ${match.id.slice(0, 4)}`,
-                        compatibility: Number(match.match_score),
-                        status: match.status,
-                        newMatch: match.status === "pending",
-                      }}
-                      onClick={() => setSelectedMatch(match)}
+                      match={match}
+                      onClick={() => handleMatchClick(match)}
                     />
                   ))}
                 </div>
@@ -170,9 +137,7 @@ const Messages = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-sm truncate">
-                            {`Match ${match.id.slice(0, 4)}`}
-                          </div>
+                          <div className="font-medium text-sm truncate">{`Match ${match.id.slice(0, 4)}`}</div>
                           <div className="text-xs text-muted-foreground">
                             {match.status === "pending"
                               ? "Nouveau match !"
@@ -180,8 +145,8 @@ const Messages = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -191,26 +156,20 @@ const Messages = () => {
               <CardHeader className="border-b">
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarImage src="" />
+                    <AvatarImage src={selectedConversation ? getConversationAvatar(selectedConversation) : ""} />
                     <AvatarFallback className="bg-gradient-secondary text-white">
-                      {selectedMatch
-                        ? `M${selectedMatch.id.slice(0, 2)}`
-                        : ""}
+                      {selectedMatch ? `M${selectedMatch.id.slice(0, 2)}` : ""}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-medium">
-                      {selectedMatch
-                        ? `Match ${selectedMatch.id.slice(0, 4)}`
-                        : "Sélectionnez un match"}
+                      {selectedConversation
+                        ? getConversationDisplayName(selectedConversation)
+                        : "Sélectionnez une conversation"}
                     </h3>
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-muted-foreground">
-                        {selectedMatch
-                          ? selectedMatch.status === "pending"
-                            ? "Nouveau match"
-                            : "En conversation"
-                          : ""}
+                        {selectedConversation ? "En conversation" : ""}
                       </span>
                     </div>
                   </div>
@@ -219,7 +178,7 @@ const Messages = () => {
 
               {/* Messages */}
               <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                {selectedMatch ? (
+                {selectedConversation ? (
                   messages.length === 0 ? (
                     <div className="text-muted-foreground text-center py-8">
                       Aucun message. Commencez la conversation !
@@ -228,36 +187,30 @@ const Messages = () => {
                     messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`flex ${
-                          msg.sender === "me"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
+                        className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                       >
                         <div
                           className={`rounded-xl px-4 py-2 max-w-xs ${
-                            msg.sender === "me"
+                            msg.sender_id === currentStudentId
                               ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
                               : "bg-slate-100 text-slate-800 border"
                           }`}
                         >
                           <div>{msg.content}</div>
-                          <div className="text-xs mt-1 text-right opacity-60">
-                            {msg.timestamp}
-                          </div>
+                          <div className="text-xs mt-1 text-right opacity-60">{msg.timestamp}</div>
                         </div>
                       </div>
                     ))
                   )
                 ) : (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                    Sélectionnez un match pour voir la conversation.
+                    Sélectionnez une conversation pour voir les messages.
                   </div>
                 )}
               </CardContent>
 
               {/* Message Input */}
-              {selectedMatch && (
+              {selectedConversation && (
                 <div className="border-t p-4">
                   <div className="flex space-x-2">
                     <Input
@@ -279,6 +232,16 @@ const Messages = () => {
           </div>
         </div>
       </div>
+
+      {/* Match Modal */}
+      <MatchModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        match={selectedMatch}
+        onAccept={handleAcceptMatch}
+        onReject={handleRejectMatch}
+        isLoading={isLoading}
+      />
     </div>
   );
 };
