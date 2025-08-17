@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Users, Home, LogIn, UserPlus, Sun, Moon, UserCircle, LogOut, Send, Menu, X } from "lucide-react";
+import { Users, Home, LogIn, UserPlus, Sun, Moon, UserCircle, LogOut, Send, Menu, X, Briefcase, Phone } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import React, { useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
@@ -99,6 +99,14 @@ const Header = () => {
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
             À propos
           </Link>
+          <Link to="/contact" className="text-sm font-medium hover:text-primary transition-colors">
+            Contact
+          </Link>
+          {user && (
+            <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
+              Dashboard
+            </Link>
+          )}
         </nav>
 
         {/* Right Side: Theme, Lang, User Actions */}
@@ -165,6 +173,14 @@ const Header = () => {
                   >
                     <UserCircle className="w-4 h-4 mr-2" />
                     Profil
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center px-4 py-2 hover:bg-accent text-sm"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Dashboard
                   </Link>
                   <button
                     onClick={handleLogout}
@@ -240,6 +256,13 @@ const Header = () => {
             >
               À propos
             </Link>
+            <Link
+              to="/contact"
+              className="text-sm font-medium hover:text-primary transition-colors py-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contact
+            </Link>
 
             {user ? (
               <>
@@ -249,6 +272,13 @@ const Header = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Profil
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="text-sm font-medium hover:text-primary transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
                 </Link>
                 <button
                   onClick={() => {

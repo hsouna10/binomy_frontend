@@ -1,118 +1,224 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import Header from "@/components/Header";
-import { 
-  Heart, 
-  MessageCircle, 
-  Home, 
-  Users, 
-  TrendingUp, 
+import {
+  Heart,
+  MessageCircle,
+  Home,
+  Users,
+  TrendingUp,
   Calendar,
   Bell,
   Settings,
   Target,
   Star,
-  MapPin
+  MapPin,
 } from "lucide-react";
+import axios from "axios";
+
+// === Types ===
+interface Match {
+  id: string;
+  student1_id: string;
+  student2_id: string;
+  match_score: number;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+  updated_at: string;
+}
+
+interface Activity {
+  type: string;
+  message: string;
+  time: string;
+}
 
 const Dashboard = () => {
-  const userStats = {
-    profileComplete: 85,
-    matches: 12,
-    messages: 8,
-    favorites: 5,
-    views: 34
+  const [userStats, setUserStats] = useState({
+    profileComplete: 85, // Peut venir d’un endpoint plus tard
+    matches: 0,
+    messages: 0,
+    favorites: 5, // À lier à une API plus tard
+    views: 0,
+  });
+
+  const [recentMatches, setRecentMatches] = useState<Match[]>([]);
+  const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔐 Récupérer les données utilisateur
+  const storedUser = localStorage.getItem("binomiUser");
+  const user = storedUser ? JSON.parse(storedUser) : null;
+  const token = localStorage.getItem("binomiToken")?.replace(/['"]+/g, "");
+  const currentStudentId = user?.id;
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!currentStudentId || !token) {
+        setError("Utilisateur non authentifié.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 📥 Récupérer les matches
+        const matchesRes = await axios.get(
+          `http://localhost:5000/matches/matches/${currentStudentId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const matches: Match[] = matchesRes.data.matches || [];
+
+        setRecentMatches(matches);
+
+        // 📊 Mettre à jour les stats
+        const acceptedMatches = matches.filter((m) => m.status === "accepted").length;
+        const pendingMatches = matches.filter((m) => m.status === "pending").length;
+
+        setUserStats((prev) => ({
+          ...prev,
+          matches: matches.length,
+          messages: pendingMatches * 2, // Exemple simulé
+          views: Math.min(30, matches.length * 3), // Simulé
+        }));
+
+        // 📝 Générer l’activité récente
+        const activity: Activity[] = [];
+
+        if (acceptedMatches > 0) {
+          activity.push({
+            type: "match",
+            message: `Vous avez ${acceptedMatches} match${
+              acceptedMatches > 1 ? "s" : ""
+            } accepté${acceptedMatches > 1 ? "s" : ""} !`,
+            time: "Aujourd'hui",
+          });
+        }
+
+        if (pendingMatches > 0) {
+          activity.push({
+            type: "pending",
+            message: `Vous avez ${pendingMatches} demande${
+              pendingMatches > 1 ? "s" : ""
+            } en attente.`,
+            time: "Récemment",
+          });
+        }
+
+        activity.push({
+          type: "view",
+          message: "Votre profil a été consulté plusieurs fois cette semaine.",
+          time: "Hier",
+        });
+
+        setRecentActivity(activity);
+      } catch (err: any) {
+        console.error("Erreur lors du chargement du dashboard :", err);
+        setError(
+          err.response?.data?.error ||
+            err.message ||
+            "Impossible de charger les données."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [currentStudentId, token]);
+
+  // 🧩 Fonction utilitaire pour déterminer l'autre utilisateur
+  const getOtherStudentId = (match: Match) => {
+    return match.student1_id === currentStudentId
+      ? match.student2_id
+      : match.student1_id;
   };
 
-  const recentMatches = [
-    {
-      name: "Yassine Hammadi",
-      compatibility: 92,
-      university: "UTM",
-      status: "active"
-    },
-    {
-      name: "Amine Ben Salah", 
-      compatibility: 87,
-      university: "UTM",
-      status: "pending"
-    },
-    {
-      name: "Sami Trabelsi",
-      compatibility: 78,
-      university: "INSAT", 
-      status: "viewed"
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            <p className="mt-4 text-muted-foreground">Chargement du tableau de bord...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const recentActivity = [
-    {
-      type: "match",
-      message: "Nouveau match avec Yassine (92% compatibilité)",
-      time: "Il y a 2h"
-    },
-    {
-      type: "message",
-      message: "Nouveau message de Amine",
-      time: "Il y a 4h"
-    },
-    {
-      type: "view",
-      message: "Votre profil a été consulté 3 fois",
-      time: "Hier"
-    },
-    {
-      type: "housing",
-      message: "Nouveau logement dans vos critères",
-      time: "Il y a 2 jours"
-    }
-  ];
-
-  const favoriteHousings = [
-    {
-      title: "Studio moderne près UTM",
-      price: 300,
-      location: "Ariana",
-      status: "available"
-    },
-    {
-      title: "Appartement 2 pièces",
-      price: 600,
-      location: "Tunis Centre",
-      status: "contacted"
-    }
-  ];
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-8">
+          <Card className="max-w-lg mx-auto">
+            <CardHeader>
+              <CardTitle className="text-red-500 flex items-center">
+                <Bell className="w-5 h-5 mr-2" />
+                Erreur
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">{error}</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Réessayer
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <div className="container py-8">
         <div className="max-w-6xl mx-auto space-y-6">
-          {/* Welcome Header */}
-          <div className="flex items-center justify-between">
+          {/* En-tête */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Bonjour Sarah ! 👋</h1>
+              <h1 className="text-3xl font-bold">
+                Bonjour {user?.first_name || "Étudiant"} ! 👋
+              </h1>
               <p className="text-muted-foreground">
-                Voici un résumé de votre activité Binomi
+                Voici un résumé de votre activité Binomi.
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => (window.location.href = "/profile")}>
                 <Settings className="w-4 h-4 mr-2" />
                 Paramètres
               </Button>
             </div>
           </div>
 
-          {/* Stats Cards */}
+          {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="p-4">
@@ -186,8 +292,9 @@ const Dashboard = () => {
             </Card>
           </div>
 
+          {/* Grille principale */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Matches */}
+            {/* Matches récents */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -197,38 +304,53 @@ const Dashboard = () => {
                 <CardDescription>Vos dernières compatibilités</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentMatches.map((match, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>
-                          {match.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{match.name}</p>
-                        <p className="text-xs text-muted-foreground">{match.university}</p>
+                {recentMatches.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun match pour le moment.</p>
+                ) : (
+                  recentMatches.map((match) => (
+                    <div key={match.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-primary text-white">
+                            {getOtherStudentId(match).slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-sm">Étudiant {getOtherStudentId(match).slice(-4)}</p>
+                          <p className="text-xs text-muted-foreground">Score : {match.match_score}%</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant={
+                            match.status === "accepted"
+                              ? "default"
+                              : match.status === "pending"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className="text-xs"
+                        >
+                          {match.status === "accepted" && "Accepté"}
+                          {match.status === "pending" && "En attente"}
+                          {match.status === "rejected" && "Rejeté"}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge variant="secondary" className="text-xs">
-                        {match.compatibility}%
-                      </Badge>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {match.status === "active" && "💬 Actif"}
-                        {match.status === "pending" && "⏳ En attente"}
-                        {match.status === "viewed" && "👀 Vu"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" className="w-full" size="sm">
+                  ))
+                )}
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  size="sm"
+                  onClick={() => (window.location.href = "/matching")}
+                >
                   Voir tous les matches
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Activity Feed */}
+            {/* Activité */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -238,22 +360,26 @@ const Dashboard = () => {
                 <CardDescription>Ce qui se passe dans votre réseau</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-primary rounded-full mt-2" />
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.message}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
+                {recentActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucune activité.</p>
+                ) : (
+                  recentActivity.map((act, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full mt-2" />
+                      <div>
+                        <p className="text-sm">{act.message}</p>
+                        <p className="text-xs text-muted-foreground">{act.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
                 <Button variant="outline" className="w-full" size="sm">
-                  Voir toute l'activité
+                  Voir tout
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Favorite Housings */}
+            {/* Favoris */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -262,59 +388,61 @@ const Dashboard = () => {
                 </CardTitle>
                 <CardDescription>Vos logements sauvegardés</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {favoriteHousings.map((housing, index) => (
-                  <div key={index} className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium text-sm">{housing.title}</h4>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <MapPin className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{housing.location}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-primary">{housing.price} TND</p>
-                        <Badge 
-                          variant={housing.status === "available" ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {housing.status === "available" ? "Disponible" : "Contacté"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" className="w-full" size="sm">
-                  Voir tous les favoris
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Fonctionnalité en cours de développement.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  size="sm"
+                  onClick={() => (window.location.href = "/housing")}
+                >
+                  Parcourir les logements
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Actions */}
+          {/* Actions rapides */}
           <Card>
             <CardHeader>
               <CardTitle>Actions rapides</CardTitle>
-              <CardDescription>Continuez votre recherche de binôme et logement</CardDescription>
+              <CardDescription>Continuez votre recherche</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Button variant="gradient" className="h-12">
+                <Button
+                  variant="gradient"
+                  className="h-12"
+                  onClick={() => (window.location.href = "/matching")}
+                >
                   <Users className="w-4 h-4 mr-2" />
                   Découvrir des binômes
                 </Button>
-                <Button variant="outline" className="h-12">
+                <Button
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => (window.location.href = "/housing")}
+                >
                   <Home className="w-4 h-4 mr-2" />
-                  Parcourir les logements
+                  Logements
                 </Button>
-                <Button variant="outline" className="h-12">
+                <Button
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => (window.location.href = "/messages")}
+                >
                   <MessageCircle className="w-4 h-4 mr-2" />
-                  Mes conversations
+                  Messages
                 </Button>
-                <Button variant="outline" className="h-12">
+                <Button
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => (window.location.href = "/profile")}
+                >
                   <Settings className="w-4 h-4 mr-2" />
-                  Modifier mon profil
+                  Profil
                 </Button>
               </div>
             </CardContent>
