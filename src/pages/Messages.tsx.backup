@@ -153,9 +153,9 @@ const handleSendMessage = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        conversationId: selectedConversation.id,
-        senderId: currentStudentId,
-        text: newMessage,
+        conversation_id: selectedConversation.id,
+        sender_id: currentStudentId,
+        content: newMessage,
       }),
     });
 
