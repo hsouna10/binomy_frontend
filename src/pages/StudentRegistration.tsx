@@ -74,7 +74,7 @@ export default function StudentRegistration() {
         clean_frequency: formData.clean,
         noise_level: formData.noise_level,
         cleanliness_importance: formData.respect || null,
-        cleaning_schedule: formData.cleaning_schedule === 'Yes' || formData.cleaning_schedule === true || formData.cleaning_schedule === 'true',
+        cleaning_schedule: formData.cleaning_schedule === 'Yes' || formData.cleaning_schedule === 'true',
         conflict_resolution: formData.conflict_handling,
         smoke_status: formData.smoke,
         accept_smoking_roommate: formData.accepts_smoker,
