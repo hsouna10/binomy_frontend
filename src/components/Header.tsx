@@ -42,7 +42,7 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("binomiToken");
+    const token = sessionStorage.getItem("binomiToken");
     if (token) {
       axios
         .get("http://localhost:5000/api/me", {
@@ -66,8 +66,8 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("binomiUser");
-    localStorage.removeItem("binomiToken");
+    sessionStorage.removeItem("binomiUser");
+    sessionStorage.removeItem("binomiToken");
     setUser(null);
     setMenuOpen(false);
     navigate("/auth");

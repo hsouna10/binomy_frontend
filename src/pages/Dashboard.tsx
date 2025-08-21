@@ -58,9 +58,9 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   // 🔐 Récupérer les données utilisateur
-  const storedUser = localStorage.getItem("binomiUser");
+  const storedUser = sessionStorage.getItem("binomiUser");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  const token = localStorage.getItem("binomiToken")?.replace(/['"]+/g, "");
+  const token = sessionStorage.getItem("binomiToken")?.replace(/['"]+/g, "");
   const currentStudentId = user?.id;
 
   useEffect(() => {

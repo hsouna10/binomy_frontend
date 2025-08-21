@@ -95,7 +95,7 @@ export const BookingModal = ({ property, isOpen, onClose }: BookingModalProps) =
 
     const formattedDate = format(selectedDate, "yyyy-MM-dd", { locale: fr });
 
-    const storedUser = localStorage.getItem("binomiUser");
+    const storedUser = sessionStorage.getItem("binomiUser");
     const user = storedUser ? JSON.parse(storedUser) : null;
     if (!user) {
       toast({

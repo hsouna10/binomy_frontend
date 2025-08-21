@@ -9,6 +9,7 @@ import MatchCircle from "@/components/MatchCircle";
 import MatchModal from "@/components/MatchModal";
 import { useToast } from "@/components/ui/use-toast";
 import { Send, Users } from "lucide-react";
+import { io } from "socket.io-client";
 
 interface Match {
   id: string;
@@ -78,36 +79,75 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
   const { toast } = useToast();
-  const currentStudentId = localStorage.getItem("studentId");
-
+  const currentStudentId = sessionStorage.getItem("studentId");
   useEffect(() => {
-    if (!currentStudentId) return;
-    
-    // Charger les matches
-    fetchMatches();
-    // Charger les conversations
-    fetchConversations();
-  }, [currentStudentId]);
+  if (!currentStudentId) return;
 
-  const fetchMatches = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/matches/matches/${currentStudentId}`);
-      const data = await response.json();
-      
-      if (data.matches) {
-        const formatted: FormattedMatch[] = data.matches.map((m: Match, i: number) => ({
-          ...m,
-          name: m.name || `Match ${i + 1}`,
-          compatibility: Number(m.match_score) || 0,
-          newMatch: m.status === "pending",
-        }));
-        setMatches(formatted);
-      }
-    } catch (error) {
-      console.error("Erreur récupération matches:", error);
-    }
+  const s = io("http://localhost:5000");
+  setSocket(s);
+
+  s.emit("register", currentStudentId);
+
+  return () => {
+    s.disconnect();
   };
+}, [currentStudentId]);
+  useEffect(() => {
+  if (!currentStudentId) return;
+
+  // Charger les matches
+  fetchMatches();
+  // Charger les conversations
+  fetchConversations();
+}, [currentStudentId]);
+useEffect(() => {
+  if (!socket || !selectedConversation) return;
+
+  socket.on("receive_message", (msg: Message) => {
+    if (msg.conversation_id === selectedConversation.id) {
+      setMessages(prev => [...prev, msg]);
+    }
+  });
+
+  socket.on("new_conversation", (conv: Conversation) => {
+    setConversations(prev => [conv, ...prev]);
+  });
+
+  return () => {
+    socket.off("receive_message");
+    socket.off("new_conversation");
+  };
+}, [socket, selectedConversation]);
+
+
+const fetchMatches = async () => {
+  try {
+    const response = await fetch(`http://localhost:5000/matches/matches/${currentStudentId}`);
+    const data = await response.json();
+
+    if (data.matches) {
+      const formatted: FormattedMatch[] = data.matches.map((m: any) => {
+        // Déterminer l'autre utilisateur
+        const otherUser = m.user1.id === currentStudentId ? m.user2 : m.user1;
+
+        return {
+          ...m,
+          name: `${otherUser.first_name} ${otherUser.last_name}`, // vrai nom
+          avatar: otherUser.profile_picture_url, // vraie photo
+          compatibility: Number(m.score) || 0,   // ⚡ correction ici
+          newMatch: m.status === "pending",
+        };
+      });
+
+      setMatches(formatted);
+    }
+  } catch (error) {
+    console.error("Erreur récupération matches:", error);
+  }
+};
+
 
   const fetchConversations = async () => {
     try {
@@ -124,7 +164,23 @@ const Messages = () => {
     }
   };
 
+  const fetchMessages = async (conversationId: string) => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/messages/${conversationId}`);
+    const data = await response.json();
 
+    console.log("🔍 Messages récupérés:", data);
+
+    // Si ton backend renvoie { rows: [...] } ou un array directement
+    const messagesArray = Array.isArray(data) ? data : data.rows;
+
+    if (messagesArray) {
+      setMessages(messagesArray);
+    }
+  } catch (error) {
+    console.error("Erreur récupération messages:", error);
+  }
+};
 
   useEffect(() => {
     if (selectedConversation) {
@@ -133,53 +189,23 @@ const Messages = () => {
   }, [selectedConversation]);
 
   // Fetch messages in a conversation
-const fetchMessages = async (conversationId: string) => {
-  try {
-    const response = await fetch(`http://localhost:5000/api/messages/${conversationId}`);
-    const data = await response.json();
-    if (data) {
-      setMessages(data);
-    }
-  } catch (error) {
-    console.error("Erreur récupération messages:", error);
-  }
-};
+
+
 
 // Send a message
-const handleSendMessage = async () => {
-  if (!newMessage.trim() || !selectedConversation || !currentStudentId) return;
-  try {
-    const response = await fetch(`http://localhost:5000/api/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        conversationId: selectedConversation.id,
-        senderId: currentStudentId,
-        text: newMessage,
-      }),
-    });
+const handleSendMessage = () => {
+  if (!newMessage.trim() || !selectedConversation || !currentStudentId || !socket) return;
 
-    if (response.ok) {
-      const data = await response.json();
-      setMessages(prev => [...prev, data]);
-      setNewMessage("");
-      fetchConversations(); // refresh conversation list
-    } else {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer le message. Veuillez réessayer.",
-        variant: "destructive"
-      });
-    }
-  } catch (error) {
-    console.error("Erreur envoi message:", error);
-    toast({
-      title: "Erreur",
-      description: "Impossible d'envoyer le message. Veuillez réessayer.",
-      variant: "destructive"
-    });
-  }
+  socket.emit("send_message", {
+    conversationId: selectedConversation.id,
+    senderId: currentStudentId,
+    text: newMessage,
+  });
+
+  setNewMessage("");
 };
+
+
   
 
   const handleMatchClick = async (match: FormattedMatch) => {

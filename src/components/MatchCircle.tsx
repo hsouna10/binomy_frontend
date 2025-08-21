@@ -7,7 +7,7 @@ interface MatchCircleProps {
     name: string;
     compatibility: number;
     avatar?: string;
-    status: 'pending' | 'accepted' | 'rejected';
+    status: "pending" | "accepted" | "rejected";
     newMatch?: boolean;
   };
   onClick: () => void;
@@ -39,22 +39,22 @@ const MatchCircle = ({ match, onClick }: MatchCircleProps) => {
         onClick={onClick}
       >
         <div
-          className={`w-20 h-20 rounded-full border-4 flex items-center justify-center bg-white ${getCircleColor(
+          className={`w-20 h-20 rounded-full border-4 flex items-center justify-center bg-white overflow-hidden ${getCircleColor(
             match.compatibility
           )}`}
         >
-          <Avatar className="w-16 h-16">
-            <AvatarImage src={match.avatar} />
-            <AvatarFallback className="bg-[#7D3CFF] text-white text-lg font-semibold">
-              {match.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase()}
-            </AvatarFallback>
+          <Avatar className="w-full h-full">
+            {match.avatar ? (
+              <AvatarImage src={match.avatar} className="object-cover" />
+            ) : (
+              <AvatarFallback className="text-lg">
+                {match.name?.split(" ").map((n) => n[0]).join("")}
+              </AvatarFallback>
+            )}
           </Avatar>
         </div>
+
+        {/* Badge du pourcentage */}
         <Badge
           className={`absolute left-1/2 -bottom-3 -translate-x-1/2 px-3 py-1 text-xs font-semibold text-white border-0 ${getBadgeColor(
             match.compatibility
@@ -63,7 +63,9 @@ const MatchCircle = ({ match, onClick }: MatchCircleProps) => {
           {match.compatibility}% Match
         </Badge>
       </div>
-      <div className="text-center mt-2">
+
+      {/* Nom + statut sous le cercle */}
+      <div className="text-center mt-4">
         <p className="text-sm font-bold text-[#7D3CFF] truncate max-w-[80px]">
           {match.name}
         </p>

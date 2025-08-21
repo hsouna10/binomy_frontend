@@ -63,7 +63,7 @@ export default function StudentRegistration() {
 
   const handleFinalSubmit = async () => {
     try {
-      const token = localStorage.getItem("binomiToken");
+      const token = sessionStorage.getItem("binomiToken");
       const payload = {
         university: formData.university,
         study_level: formData.study_level,

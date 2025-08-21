@@ -17,7 +17,7 @@ const Profile = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("binomiToken");
+        const token = sessionStorage.getItem("binomiToken");
         if (!token) throw new Error("Token manquant");
         const data = await getProfile(token);
         setProfile(data);
@@ -54,7 +54,7 @@ const Profile = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("binomiToken");
+      const token = sessionStorage.getItem("binomiToken");
       if (!token) throw new Error("Token manquant");
       await updateProfile(token, editData);
       setProfile(editData);

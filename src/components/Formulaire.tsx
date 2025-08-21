@@ -37,7 +37,7 @@ export function PropertyForm({ onSuccess }: { onSuccess?: () => void }) {
   const { toast } = useToast();
 
   const getOwnerId = () => {
-    const userStr = localStorage.getItem("binomiUser");
+    const userStr = sessionStorage.getItem("binomiUser");
     if (!userStr) throw new Error("Utilisateur non connecté");
     const user = JSON.parse(userStr);
     return user.id;

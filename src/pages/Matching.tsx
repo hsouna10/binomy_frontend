@@ -16,7 +16,7 @@ const Matching = () => {
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    const u = localStorage.getItem("binomiUser");
+    const u = sessionStorage.getItem("binomiUser");
     if (u) setUser(JSON.parse(u));
   }, []);
 

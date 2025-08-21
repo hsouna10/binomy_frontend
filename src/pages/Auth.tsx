@@ -35,7 +35,7 @@ const translations = {
     accountCreated: "Votre compte a bien été créé.",
     error: "Erreur",
     passwordsDontMatch: "Les mots de passe ne correspondent pas",
-    alreadyHaveAccount: "Vous avez déjà un compte ?",
+    alreadyHaveAccount: "Vous avez fjà un compte ?",
     toLogin: "Se connecter",
     toRegister: "Créer un compte"
   },
@@ -167,9 +167,9 @@ const Auth = () => {
                       try {
                         const res = await api.post("/signin", { email: loginEmail, password: loginPassword });
                         const data = res.data;
-                        localStorage.setItem("binomiUser", JSON.stringify(data.user));
-                        localStorage.setItem("binomiToken", data.token);
-                        localStorage.setItem("studentId", data.user.id); // ou user.studentId selon ta structure
+                        sessionStorage.setItem("binomiUser", JSON.stringify(data.user));
+                        sessionStorage.setItem("binomiToken", data.token);
+                        sessionStorage.setItem("studentId", data.user.id);
                         navigate("/matching");
                       } catch (err) {
                         setLoginError("Erreur serveur");
@@ -303,8 +303,9 @@ const Auth = () => {
                         headers: { "Content-Type": "multipart/form-data" },
                       });
                       const data = res.data;
-                      localStorage.setItem("binomiUser", JSON.stringify(data.user));
-                      localStorage.setItem("binomiToken", data.token);
+                      sessionStorage.setItem("binomiUser", JSON.stringify(data.user));
+                      sessionStorage.setItem("binomiToken", data.token);
+
                       toast({ title: t.register, description: t.accountCreated, variant: "default" });
                       setShowStudentRegistration(true);
                     } catch (err) {
